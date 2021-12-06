@@ -1,4 +1,4 @@
-import { ObserveDescriptor } from './changesObserver';
+import { ignoreObservations, ObserveDescriptor } from './changesObserver';
 import { allNodes, onNodeCreation } from './domHelpers';
 import { getMetadata } from './metadata';
 import { initObserve, observeNode } from './observe';
@@ -14,7 +14,10 @@ const observeDescriptor: ObserveDescriptor = {
 		return {
 			before: () => {},
 			after: () => {
-				console.log('function', property, 'call with thisArg and argArray respectively', thisArg, argArray);
+				console.trace()
+				ignoreObservations(() => {
+					console.log('function', property, 'call with thisArg and argArray respectively', thisArg, argArray);
+				});
 			},
 		};
 	},
@@ -23,7 +26,9 @@ const observeDescriptor: ObserveDescriptor = {
 		return {
 			before: () => {},
 			after: () => {
-				console.log('property', property, 'get');
+				ignoreObservations(() => {
+					console.log('property', property, 'get');
+				});
 			},
 		};
 	},
@@ -32,7 +37,9 @@ const observeDescriptor: ObserveDescriptor = {
 		return {
 			before: () => {},
 			after: () => {
-				console.log(`property`, property, `set to`, value);
+				ignoreObservations(() => {
+					console.log(`property`, property, `set to`, value);
+				});
 			},
 		};
 	},
