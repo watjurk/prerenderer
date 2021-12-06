@@ -1,3 +1,5 @@
-import { ObserveDescriptor, observe } from './observe';
+import { ObserveDescriptor } from './descriptor';
+import { ignoreObservations } from './ignore';
+import { observe } from './observe';
 
-export { ObserveDescriptor, observe };
+export { ObserveDescriptor, observe, ignoreObservations };

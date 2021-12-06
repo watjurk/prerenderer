@@ -1,66 +1,8 @@
+import { NObserveDescriptor, ObserveDescriptor } from './descriptor';
 import * as objectHelpers from './objectHelpers';
 
-export type UnknownFunction = (...args: unknown[]) => unknown;
-function observeFunctionCall(fn: UnknownFunction, target: any, propertyKey: PropertyKey, nObserveDescriptor: NObserveDescriptor): UnknownFunction {
-	const newFunction: UnknownFunction = function (this: unknown, ...args): unknown {
-		const onFunctionCallContext = nObserveDescriptor.onFunctionCallContext(target, propertyKey, this, args);
-		onFunctionCallContext?.before();
-		const returnValue = fn.apply(this, args);
-		onFunctionCallContext?.after(returnValue);
-		return returnValue;
-	};
-
-	return newFunction;
-}
-
-export type ObserveDescriptor = Partial<NObserveDescriptor>;
-
-export interface NObserveDescriptor {
-	onFunctionCallContext(
-		target: any,
-		property: PropertyKey,
-		thisArg: unknown,
-		argArray: unknown[],
-	): {
-		before: () => void;
-		after: (returnValue: unknown) => void;
-	} | void;
-
-	onPropertyGetContext(
-		target: any,
-		property: PropertyKey,
-	): {
-		before: () => void;
-		after: (value: unknown) => void;
-	} | void;
-
-	onPropertySetContext(
-		target: any,
-		property: PropertyKey,
-		value: unknown,
-	): {
-		before: () => void;
-		after: () => void;
-	} | void;
-}
-
-export function normalizeObserveDescriptor(ObserveDescriptor: ObserveDescriptor): NObserveDescriptor {
-	const noopContext = () => ({
-		before: () => undefined,
-		after: () => undefined,
-	});
-
-	const NObserveDescriptor: NObserveDescriptor = {
-		onFunctionCallContext: ObserveDescriptor.onFunctionCallContext ?? noopContext,
-		onPropertyGetContext: ObserveDescriptor.onPropertyGetContext ?? noopContext,
-		onPropertySetContext: ObserveDescriptor.onPropertySetContext ?? noopContext,
-	};
-
-	return NObserveDescriptor;
-}
-
-export  function observe(target: any, ObserveDescriptor: ObserveDescriptor): void {
-	const nObserveDescriptor = normalizeObserveDescriptor(ObserveDescriptor);
+export function observe(target: any, ObserveDescriptor: ObserveDescriptor): void {
+	const nObserveDescriptor = new NObserveDescriptor(ObserveDescriptor);
 	const targetPrototypePropertyKeys = objectHelpers.getPrototypePropertyKeys(target);
 
 	// This section observes properties not owned by target, but by target prototypes.
@@ -84,10 +26,10 @@ export  function observe(target: any, ObserveDescriptor: ObserveDescriptor): voi
 			get(): unknown {
 				const onPropertyGetContext = nObserveDescriptor.onPropertyGetContext(target, propertyKey);
 
-				onPropertyGetContext?.before();
+				onPropertyGetContext.before();
 				const prototype = objectHelpers.getPrototypeAfter(this, mockPrototype);
 				let v = getProperty(prototype, propertyKey, this);
-				onPropertyGetContext?.after(v);
+				onPropertyGetContext.after(v);
 
 				if (typeof v === 'function') {
 					v = observeFunctionCall(v, target, propertyKey, nObserveDescriptor);
@@ -98,10 +40,10 @@ export  function observe(target: any, ObserveDescriptor: ObserveDescriptor): voi
 			set(v: unknown) {
 				const onPropertySetContext = nObserveDescriptor.onPropertySetContext(target, propertyKey, v);
 
-				onPropertySetContext?.before();
+				onPropertySetContext.before();
 				const prototype = objectHelpers.getPrototypeAfter(this, mockPrototype);
 				setProperty(prototype, propertyKey, v, this);
-				onPropertySetContext?.after();
+				onPropertySetContext.after();
 			},
 		});
 	}
@@ -136,10 +78,10 @@ export  function observe(target: any, ObserveDescriptor: ObserveDescriptor): voi
 			get(): unknown {
 				const onPropertyGetContext = nObserveDescriptor.onPropertyGetContext(target, propertyKey);
 
-				onPropertyGetContext?.before();
+				onPropertyGetContext.before();
 				const originalProperties = this[originalPropertiesKey];
 				let v = getProperty(originalProperties, propertyKey, this);
-				onPropertyGetContext?.after(v);
+				onPropertyGetContext.after(v);
 
 				if (typeof v === 'function') {
 					v = observeFunctionCall(v, target, propertyKey, nObserveDescriptor);
@@ -149,10 +91,10 @@ export  function observe(target: any, ObserveDescriptor: ObserveDescriptor): voi
 			set(v: unknown) {
 				const onPropertySetContext = nObserveDescriptor.onPropertySetContext(target, propertyKey, v);
 
-				onPropertySetContext?.before();
+				onPropertySetContext.before();
 				const originalProperties = this[originalPropertiesKey];
 				setProperty(originalProperties, propertyKey, v, this);
-				onPropertySetContext?.after();
+				onPropertySetContext.after();
 			},
 		});
 	}
@@ -163,6 +105,19 @@ export  function observe(target: any, ObserveDescriptor: ObserveDescriptor): voi
 		enumerable: false,
 		writable: false,
 	});
+}
+
+type UnknownFunction = (...args: unknown[]) => unknown;
+function observeFunctionCall(fn: UnknownFunction, target: any, propertyKey: PropertyKey, nObserveDescriptor: NObserveDescriptor): UnknownFunction {
+	const newFunction: UnknownFunction = function (this: unknown, ...args): unknown {
+		const onFunctionCallContext = nObserveDescriptor.onFunctionCallContext(target, propertyKey, this, args);
+		onFunctionCallContext.before();
+		const returnValue = fn.apply(this, args);
+		onFunctionCallContext.after(returnValue);
+		return returnValue;
+	};
+
+	return newFunction;
 }
 
 function getProperty(object: any, propertyKey: PropertyKey, getterThisContext: any): any {

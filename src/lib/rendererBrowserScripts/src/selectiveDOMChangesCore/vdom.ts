@@ -1,5 +1,4 @@
-import 'zone.js';
-
+import { ignoreObservations } from './changesObserver/ignore';
 import { allNodes } from './domHelpers';
 import { isInternalNode } from './internal';
 import { getMetadata } from './metadata';
@@ -15,8 +14,7 @@ window.o = () => console.log(vdomRoot.documentElement.outerHTML);
 window.d = () => console.dir(vdomRoot.documentElement);
 
 export function getCorrespondingVDomNode(domNode: Node): Node {
-	const zone = Zone.current.fork({ name: 'vdom', properties: { __is_internal__: true } });
-	return zone.runGuarded((): Node => {
+	return ignoreObservations((): Node => {
 		let vdomNode = dom2vdom.get(domNode);
 		if (vdomNode !== undefined) {
 			return vdomNode;
@@ -34,15 +32,17 @@ export function getCorrespondingVDomNode(domNode: Node): Node {
 }
 
 export function syncVDom(): void {
-	const domNodes = allNodes(document, (domNode) => {
-		if (isInternalNode(domNode)) return false;
-		if (getMetadata(domNode).isCreatedByJs) return false;
-		return true;
-	});
+	ignoreObservations((): void => {
+		const domNodes = allNodes(document, (domNode) => {
+			if (isInternalNode(domNode)) return false;
+			if (getMetadata(domNode).isCreatedByJs) return false;
+			return true;
+		});
 
-	for (const domNode of domNodes) {
-		addDomNodeToVDom(domNode);
-	}
+		for (const domNode of domNodes) {
+			addDomNodeToVDom(domNode);
+		}
+	});
 }
 
 function addDomNodeToVDom(domNode: Node): void {
