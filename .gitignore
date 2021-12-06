@@ -1,0 +1,31 @@
+## Global
+# Dotenv environment variables file
+.env
+
+# Dependency directories
+node_modules
+package-lock.json
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+# Compiled output
+out
+
+# Logs
+logs
+*.log
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+## System Files
+
+.DS_Store
+Thumbs.db

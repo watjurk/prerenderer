@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "module": "commonjs",
+		"esModuleInterop": true,
+    "target": "esnext",
+
+    "types": [
+			"node",
+		],
+    "lib": [
+      "ESNext",
+			"DOM",
+    ],
+
+    "baseUrl": "./src",
+    "rootDir": "./src",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+    },
+
+    "outDir": "out",
+    "declaration": true,
+
+		"strict": true,
+		"allowJs": true,
+    "checkJs": false,
+		"alwaysStrict": true,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"strictBindCallApply": true,
+		"strictPropertyInitialization": false,
+		"noImplicitThis": true,
+		"noImplicitAny": true,
+		"noImplicitReturns": true
+  },
+  "include": [
+    "./src/**/*.ts"
+  ],
+	"exclude": [
+		"./src/lib/rendererBrowserScripts/**"
+	]
+}

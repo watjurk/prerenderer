@@ -1,0 +1,15 @@
+{
+	"files.exclude": {
+		"out/**/*.map": true,
+	},
+	"eslint.workingDirectories": [
+		{
+			"directory": "${workspaceRoot}",
+			"changeProcessCWD": true
+		}
+	],
+	"prettier.configPath": ".prettierrc",
+	"[typescript]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
+	},
+}
