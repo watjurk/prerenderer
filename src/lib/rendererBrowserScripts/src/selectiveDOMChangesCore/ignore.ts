@@ -1,8 +1,8 @@
 import 'zone.js';
 
-const isIgnoredKey = 'changes_observer_is_ignored';
+const isIgnoredKey = 'selective_dom_changes_core_is_ignored';
 
-export function ignoreObservations<T extends (...args: any) => any, RType = ReturnType<T>>(callback: T): RType {
+export function ignoreAllObservations<T extends (...args: any) => any, RType = ReturnType<T>>(callback: T): RType {
 	const ignoreZone = Zone.current.fork({
 		name: 'ignore_zone',
 		properties: {

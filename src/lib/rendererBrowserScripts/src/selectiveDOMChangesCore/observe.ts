@@ -1,5 +1,5 @@
-import { ignoreObservations, observe, ObserveDescriptor } from './changesObserver';
-import { isElement } from './domHelpers';
+import { observe, ObserveDescriptor } from './changesObserver';
+import { ignoreAllObservations } from './ignore';
 import { isInternalNode } from './internal';
 import { getMetadata } from './metadata';
 
@@ -9,7 +9,7 @@ export function initObserve(descriptor: ObserveDescriptor): void {
 }
 
 export function observeNode(node: Node) {
-	ignoreObservations(() => {
+	ignoreAllObservations(() => {
 		const metadata = getMetadata(node);
 
 		if (metadata.isObserved) return;

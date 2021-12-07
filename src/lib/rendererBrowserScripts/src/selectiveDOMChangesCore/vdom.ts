@@ -1,5 +1,5 @@
-import { ignoreObservations } from './changesObserver/ignore';
 import { allNodes } from './domHelpers';
+import { ignoreAllObservations } from './ignore';
 import { isInternalNode } from './internal';
 import { getMetadata } from './metadata';
 
@@ -14,7 +14,7 @@ window.o = () => console.log(vdomRoot.documentElement.outerHTML);
 window.d = () => console.dir(vdomRoot.documentElement);
 
 export function getCorrespondingVDomNode(domNode: Node): Node {
-	return ignoreObservations((): Node => {
+	return ignoreAllObservations((): Node => {
 		let vdomNode = dom2vdom.get(domNode);
 		if (vdomNode !== undefined) {
 			return vdomNode;
@@ -32,7 +32,7 @@ export function getCorrespondingVDomNode(domNode: Node): Node {
 }
 
 export function syncVDom(): void {
-	ignoreObservations((): void => {
+	ignoreAllObservations((): void => {
 		const domNodes = allNodes(document, (domNode) => {
 			if (isInternalNode(domNode)) return false;
 			if (getMetadata(domNode).isCreatedByJs) return false;

@@ -1,7 +1,7 @@
-import { ignoreObservations } from './changesObserver';
+import { ignoreAllObservations } from './ignore';
 
 export function allNodes(node: Node, shouldTraverse?: (node: Node) => boolean): Node[] {
-	return ignoreObservations((): Node[] => {
+	return ignoreAllObservations((): Node[] => {
 		// normalizedShouldTraverse
 		const nShouldTraverse = shouldTraverse ?? (() => true);
 		const all: Node[] = [];
@@ -26,7 +26,7 @@ type OnNodeCreationCallback = (node: Node) => Node;
 
 export function onNodeCreation(callback: OnNodeCreationCallback): void {
 	// TODO: watch for cloned nodes
-	ignoreObservations(() => {
+	ignoreAllObservations(() => {
 		const createElement = document.createElement;
 		document.createElement = function (...args: unknown[]): any {
 			// @ts-ignore
