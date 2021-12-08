@@ -13,7 +13,7 @@ async function prerender(plugins: Plugin[]): Promise<RenderedRoute[]> {
 	const port = getPort(server);
 	const renderedRoutes = await render(port, prerenderInstance.render);
 
-	// server.close();
+	server.close();
 	return renderedRoutes;
 }
 

@@ -3,21 +3,22 @@ import { isText } from 'domhandler';
 import fs from 'fs';
 import path from 'path';
 
-const selectiveDOMChangesCoreSource = fs.readFileSync(path.resolve(__dirname, 'rendererBrowserScripts/out/selectiveDOMChangesCore/index.js')).toString();
-const selectiveDOMChangesAdditionalNodesSource = fs
-	.readFileSync(path.resolve(__dirname, 'rendererBrowserScripts/out/selectiveDOMChangesAdditionalNodes/index.js'))
-	.toString();
-const cleanupScript = `window.document.currentScript.remove();`;
+const selectiveDOMChangesCorePath = path.resolve(__dirname, 'rendererBrowserScripts/out/selectiveDOMChangesCore/index.js');
+const selectiveDOMChangesAdditionalNodesPath = path.resolve(__dirname, 'rendererBrowserScripts/out/selectiveDOMChangesAdditionalNodes/index.js');
+
+const selectiveDOMChangesCoreSource = normalizeNewline(fs.readFileSync(selectiveDOMChangesCorePath).toString());
+const selectiveDOMChangesAdditionalNodesSource = normalizeNewline(fs.readFileSync(selectiveDOMChangesAdditionalNodesPath).toString());
+const removeScript = `window.document.currentScript.remove();`;
 
 const prerendererScriptKey = `__prerenderer__`;
-const coreScript = `<script ${prerendererScriptKey}>${selectiveDOMChangesCoreSource}\n${cleanupScript}</script>`;
-const additionalNodesScript = `<script ${prerendererScriptKey}>${selectiveDOMChangesAdditionalNodesSource}\n${cleanupScript}</script>`;
+const coreScript = `<script ${prerendererScriptKey}>${selectiveDOMChangesCoreSource}\n${removeScript}</script>`;
+const additionalNodesScript = `<script ${prerendererScriptKey}>${selectiveDOMChangesAdditionalNodesSource}\n${removeScript}</script>`;
 
 export function modifyHtml(html: string): string {
 	const $ = cheerio.load(html);
 	$('head').prepend(coreScript);
 
-	// Insert our script before every script in html.
+	// Insert our script before every script.
 	// Exceptions are scripts with prerendererScriptKey tag.
 	$(`script:not([${prerendererScriptKey}])`).each((i, el) => {
 		for (const childNode of el.childNodes) {
@@ -34,5 +35,28 @@ export function modifyHtml(html: string): string {
 }
 
 export function modifyScript(script: string): string {
-	return `${selectiveDOMChangesAdditionalNodesSource}` + script;
+	return selectiveDOMChangesAdditionalNodesSource + script;
+}
+
+function cleanupScript(script: string): string {
+	return script.replace(selectiveDOMChangesAdditionalNodesSource, '');
+}
+
+export function cleanupContent(html: string): string {
+	const $ = cheerio.load(html);
+
+	$(`script`).each((i, el) => {
+		for (const childNode of el.childNodes) {
+			if (!isText(childNode)) continue;
+			console.log('a');
+			childNode.data = cleanupScript(childNode.data);
+			return;
+		}
+	});
+
+	return $.html();
+}
+
+function normalizeNewline(s: string): string {
+	return s.replaceAll('\r\n', '\n');
 }

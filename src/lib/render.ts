@@ -1,7 +1,7 @@
 import axios from 'axios';
 import puppeteer from 'puppeteer';
 
-import { modifyHtml, modifyScript } from './selectiveDOMChanges';
+import { cleanupContent, modifyHtml, modifyScript } from './selectiveDOMChanges';
 
 export interface RenderedRoute {
 	html: string;
@@ -87,5 +87,5 @@ async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: s
 	const content = (await page.evaluate('window.selectiveDOMChangesCore.api.getVDomContent()')) as string;
 	await page.close();
 
-	return { html: content, path: route };
+	return { html: cleanupContent(content), path: route };
 }
