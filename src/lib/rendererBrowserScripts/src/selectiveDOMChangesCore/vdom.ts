@@ -8,10 +8,9 @@ const vdomRoot = document.cloneNode() as Document;
 dom2vdom.set(document, vdomRoot);
 syncVDom();
 
-// @ts-ignore
-window.o = () => console.log(vdomRoot.documentElement.outerHTML);
-// @ts-ignore
-window.d = () => console.dir(vdomRoot.documentElement);
+export function getVDomContent(): string {
+	return vdomRoot.documentElement.outerHTML;
+}
 
 export function getCorrespondingVDomNode(domNode: Node): Node {
 	return ignoreAllObservations((): Node => {
@@ -49,12 +48,14 @@ function addDomNodeToVDom(domNode: Node): void {
 	if (dom2vdom.has(domNode)) return;
 	if (isInternalNode(domNode)) return;
 
-	if (domNode.parentNode === null) return;
-
-	const vdomParentNode = dom2vdom.get(domNode.parentNode);
-	if (vdomParentNode === undefined) throw new Error('Bad order of adding');
-
 	const vdomNode = domNode.cloneNode();
-	vdomParentNode.appendChild(vdomNode);
+
+	if (domNode.parentNode !== null) {
+		const vdomParentNode = dom2vdom.get(domNode.parentNode);
+		if (vdomParentNode === undefined) throw new Error('Bad order of adding');
+
+		vdomParentNode.appendChild(vdomNode);
+	}
+
 	dom2vdom.set(domNode, vdomNode);
 }

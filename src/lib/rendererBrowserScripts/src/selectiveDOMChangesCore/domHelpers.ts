@@ -1,4 +1,4 @@
-import { ignoreAllObservations } from './ignore';
+import { ignoreAllObservations, isIgnored } from './ignore';
 
 export function allNodes(node: Node, shouldTraverse?: (node: Node) => boolean): Node[] {
 	return ignoreAllObservations((): Node[] => {
@@ -22,39 +22,55 @@ export function allNodes(node: Node, shouldTraverse?: (node: Node) => boolean): 
 	});
 }
 
-type OnNodeCreationCallback = (node: Node) => Node;
+type OnNodeCreation = (node: Node) => void;
 
-export function onNodeCreation(callback: OnNodeCreationCallback): void {
+export function onNodeCreation(onNodeCreation: OnNodeCreation): void {
 	// TODO: watch for cloned nodes
 	ignoreAllObservations(() => {
 		const createElement = document.createElement;
 		document.createElement = function (...args: unknown[]): any {
 			// @ts-ignore
-			return callback(createElement.apply(this, args)) as HTMLElement;
+			const node = createElement.apply(this, args);
+			if (!isIgnored()) onNodeCreation(node);
+			return node;
 		};
 
 		const createElementNS = document.createElementNS;
 		document.createElementNS = function (...args: unknown[]): any {
 			// @ts-ignore
-			return callback(createElementNS.apply(this, args));
+			const node = createElementNS.apply(this, args);
+			if (!isIgnored()) onNodeCreation(node);
+			return node;
 		};
 
 		const createTextNode = document.createTextNode;
 		document.createTextNode = function (...args: unknown[]): any {
 			// @ts-ignore
-			return callback(createTextNode.apply(this, args));
+			const node = createTextNode.apply(this, args);
+			if (!isIgnored()) onNodeCreation(node);
+			return node;
 		};
 
 		const createComment = document.createComment;
 		document.createComment = function (...args: unknown[]): any {
 			// @ts-ignore
-			return callback(createComment.apply(this, args));
+			const node = createComment.apply(this, args);
+			if (!isIgnored()) onNodeCreation(node);
+			return node;
 		};
 	});
 }
 
-export function isElement(node: Node): node is Element {
-	return node.nodeType === node.ELEMENT_NODE;
+export function isElement(node: any): node is Element {
+	if (isNode(node)) {
+		return node.nodeType === node.ELEMENT_NODE;
+	}
+
+	return false;
+}
+
+export function isNode(node: any): node is Node {
+	return node instanceof Node;
 }
 
 export function removeNode(node: Node) {

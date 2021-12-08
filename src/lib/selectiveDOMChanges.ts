@@ -1,4 +1,5 @@
 import cheerio from 'cheerio';
+import { isText } from 'domhandler';
 import fs from 'fs';
 import path from 'path';
 
@@ -10,21 +11,28 @@ const cleanupScript = `window.document.currentScript.remove();`;
 
 const prerendererScriptKey = `__prerenderer__`;
 const coreScript = `<script ${prerendererScriptKey}>${selectiveDOMChangesCoreSource}\n${cleanupScript}</script>`;
-const observeDocumentNodesScript = `<script ${prerendererScriptKey}>${selectiveDOMChangesAdditionalNodesSource}\n${cleanupScript}</script>`;
-
-// TODO: handle edge case when script removes itself from DOM and it is not observed.
-// Solution: Add window.__observeNode__(window.document.currentScript) to every script request.
+const additionalNodesScript = `<script ${prerendererScriptKey}>${selectiveDOMChangesAdditionalNodesSource}\n${cleanupScript}</script>`;
 
 export function modifyHtml(html: string): string {
 	const $ = cheerio.load(html);
-	$(coreScript).prependTo('head');
+	$('head').prepend(coreScript);
 
 	// Insert our script before every script in html.
 	// Exceptions are scripts with prerendererScriptKey tag.
-	$(observeDocumentNodesScript).insertBefore(`script:not([${prerendererScriptKey}])`);
+	$(`script:not([${prerendererScriptKey}])`).each((i, el) => {
+		for (const childNode of el.childNodes) {
+			if (!isText(childNode)) continue;
+			childNode.data = modifyScript(childNode.data);
+			return;
+		}
+	});
 
 	// Insert our script as last in body so all nodes are catched.
-	$(observeDocumentNodesScript).appendTo('body');
+	$('body').append(additionalNodesScript);
 
 	return $.html();
+}
+
+export function modifyScript(script: string): string {
+	return `${selectiveDOMChangesAdditionalNodesSource}` + script;
 }

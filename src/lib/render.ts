@@ -1,7 +1,7 @@
 import axios from 'axios';
 import puppeteer from 'puppeteer';
 
-import { modifyHtml } from './selectiveDOMChanges';
+import { modifyHtml, modifyScript } from './selectiveDOMChanges';
 
 export interface RenderedRoute {
 	html: string;
@@ -29,7 +29,7 @@ export class RenderInstance {
 
 export async function render(serverPort: number, renderInstance: RenderInstance): Promise<RenderedRoute[]> {
 	const browser = await puppeteer.launch({
-		devtools: true,
+		devtools: false,
 	});
 	const rootUrl = `localhost:${serverPort}`;
 
@@ -39,7 +39,7 @@ export async function render(serverPort: number, renderInstance: RenderInstance)
 	}
 	const renderedRoutes = await Promise.all(renderRoutesPromises);
 
-	// await browser.close();
+	await browser.close();
 	return renderedRoutes;
 }
 
@@ -51,24 +51,41 @@ async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: s
 
 	page.setRequestInterception(true);
 	page.on('request', async (request) => {
-		if (request.resourceType() !== 'document') {
-			await request.continue();
-			return;
+		const getResponse = async (): Promise<string> => {
+			const response = await axios.get(request.url());
+			return String(response.data);
+		};
+
+		const respond = async (body: string): Promise<void> => {
+			await request.respond({ body });
+		};
+
+		switch (request.resourceType()) {
+			case 'document': {
+				const html = await getResponse();
+				const modifiedHtml = modifyHtml(html);
+				await respond(modifiedHtml);
+				break;
+			}
+
+			case 'script': {
+				const script = await getResponse();
+				const modifiedScript = modifyScript(script);
+				await respond(modifiedScript);
+				break;
+			}
+
+			default:
+				await request.continue();
+				break;
 		}
-
-		const response = await axios.get(request.url());
-		const html = String(response.data);
-		const modifiedHtml = modifyHtml(html);
-
-		await request.respond({ body: modifiedHtml });
 	});
 
 	await page.goto(`http://${rootUrl}${route}`);
 	await page.waitForNetworkIdle();
 
-	const content = await page.content();
-	page;
-	// await page.close();
+	const content = (await page.evaluate('window.selectiveDOMChangesCore.api.getVDomContent()')) as string;
+	await page.close();
 
 	return { html: content, path: route };
 }
