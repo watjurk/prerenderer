@@ -8,8 +8,8 @@ async function prerender(plugins: Plugin[]): Promise<RenderedRoute[]> {
 	for (const plugin of plugins) pluginPromises.push(plugin.execute(prerenderInstance));
 	await Promise.all(pluginPromises);
 
-	prerenderInstance.render.isAllowedDOMChangeFactory = () => (): Promise<boolean> => {
-		return Promise.resolve(true);
+	prerenderInstance.render.isAllowedDOMChangeFactory = () => (): boolean => {
+		return true;
 	};
 	await prerenderInstance._validate();
 

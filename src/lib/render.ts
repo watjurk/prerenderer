@@ -11,7 +11,7 @@ export interface RenderedRoute {
 export class RenderInstance {
 	routes: string[];
 	// isAllowedDOMChangeFactory is called per render, because of that there should be no state sharing between returned functions.
-	isAllowedDOMChangeFactory: () => (stackTrace: StackTrace) => Promise<boolean>;
+	isAllowedDOMChangeFactory: () => (stackTrace: StackTrace) => Promise<boolean> | boolean;
 
 	async _validate(): Promise<void> {
 		if (!(this.routes instanceof Array)) throw new Error('RenderInstance.routes is set to invalid value');
