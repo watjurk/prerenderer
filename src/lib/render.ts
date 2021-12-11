@@ -10,12 +10,12 @@ export interface RenderedRoute {
 
 export class RenderInstance {
 	routes: string[];
-	// isLegalDOMChangeFactory is called per render, because of that there should be no state sharing between returned functions.
-	isLegalDOMChangeFactory: () => (stackTrace: StackTrace) => Promise<boolean>;
+	// isAllowedDOMChangeFactory is called per render, because of that there should be no state sharing between returned functions.
+	isAllowedDOMChangeFactory: () => (stackTrace: StackTrace) => Promise<boolean>;
 
 	async _validate(): Promise<void> {
 		if (!(this.routes instanceof Array)) throw new Error('RenderInstance.routes is set to invalid value');
-		if (!(this.isLegalDOMChangeFactory instanceof Function)) throw new Error('RenderInstance.isLegalDOMChangeFactory is set to invalid value');
+		if (!(this.isAllowedDOMChangeFactory instanceof Function)) throw new Error('RenderInstance.isAllowedDOMChangeFactory is set to invalid value');
 	}
 }
 
@@ -35,12 +35,12 @@ export async function render(serverPort: number, renderInstance: RenderInstance)
 	return renderedRoutes;
 }
 
-// Keep in sync with src/lib/rendererBrowserScripts/src/selectiveDOMChangesCore/legal.ts
-const isLegalDOMChangeRoute = '__selectiveDOMChanges__/isLegalDOMChange';
+// Keep in sync with src/lib/rendererBrowserScripts/src/selectiveDOMChangesCore/Allowed.ts
+const isAllowedDOMChangeRoute = '__selectiveDOMChanges__/isAllowedDOMChange';
 
 async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: string, renderInstance: RenderInstance): Promise<RenderedRoute> {
 	const page = await browser.newPage();
-	const isLegalDOMChange = renderInstance.isLegalDOMChangeFactory();
+	const isAllowedDOMChange = renderInstance.isAllowedDOMChangeFactory();
 
 	page.on('console', (message) => console.log(message.text()));
 	page.on('pageerror', (err) => console.log(err));
@@ -72,12 +72,12 @@ async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: s
 			}
 
 			case 'xhr': {
-				if (!request.url().includes(isLegalDOMChangeRoute)) break;
+				if (!request.url().includes(isAllowedDOMChangeRoute)) break;
 				const postData = request.postData();
 				if (postData === undefined) throw new Error('Invalid post data');
 				const stackTrace = JSON.parse(postData) as StackTrace;
-				const isLegal = await isLegalDOMChange(stackTrace);
-				await request.respond({ body: isLegal === true ? '1' : '0' });
+				const isAllowed = await isAllowedDOMChange(stackTrace);
+				await request.respond({ body: isAllowed === true ? '1' : '0' });
 				return;
 			}
 		}

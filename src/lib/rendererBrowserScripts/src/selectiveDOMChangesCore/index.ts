@@ -1,7 +1,7 @@
+import { isAllowed, StackFrame, StackTrace } from './allowedDOMChange';
 import { ObserveDescriptor } from './changesObserver';
 import { allNodes, isNode, onNodeCreation } from './domHelpers';
 import { ignoreAllObservations } from './ignore';
-import { isLegal, StackFrame, StackTrace } from './legal';
 import { getMetadata } from './metadata';
 import { initObserve, observeNode } from './observe';
 import { getVDomContent, getCorrespondingVDomNode, syncVDom } from './vdom';
@@ -10,7 +10,7 @@ export { StackFrame, StackTrace };
 
 const observeDescriptor: ObserveDescriptor = {
 	onFunctionCallContext(target, property, thisArg, argArray) {
-		if (!isLegal()) return;
+		if (!isAllowed()) return;
 		proxyActionToVdom(target, (vdomNode) => {
 			const args = [];
 			for (const arg of argArray) {
@@ -26,7 +26,7 @@ const observeDescriptor: ObserveDescriptor = {
 	onPropertyGetContext(target, property) {},
 
 	onPropertySetContext(target, property, value) {
-		if (!isLegal()) return;
+		if (!isAllowed()) return;
 		proxyActionToVdom(target, (vdomNode) => {
 			// @ts-ignore
 			vdomNode[property] = value;
