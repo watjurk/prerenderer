@@ -9,7 +9,6 @@
 		"watch": "yarn run clean && yarn run watch:dev",
 		"debug": "yarn run clean && yarn run debug:dev",
 		"build": "yarn run clean && yarn run build:prod",
-		"release": "yarn run build && yarn publish --access public --non-interactive",
 		"watch:dev": "cross-env WATCH=true NODE_ENV=development rollup --watch --config ./config/rollup.config.dev.js",
 		"watch:prod": "cross-env WATCH=true NODE_ENV=production rollup --watch --config ./config/rollup.config.prod.js",
 		"debug:dev": "cross-env DEBUG=true yarn run watch:dev",
