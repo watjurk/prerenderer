@@ -1,6 +1,8 @@
-import { RenderInstance } from './lib/render';
+import { RenderInstance, StackTrace, StackFrame } from './lib/render';
 import { ServerInstance } from './lib/server';
+import { Plugin as BasePlugin } from './plugin';
 
+export { StackTrace, StackFrame };
 export class PrerenderInstance {
 	readonly server = new ServerInstance();
 	readonly render = new RenderInstance();
@@ -13,8 +15,4 @@ export class PrerenderInstance {
 	}
 }
 
-export abstract class Plugin {
-	abstract readonly name: string;
-
-	abstract execute(prerenderInstance: PrerenderInstance): Promise<void>;
-}
+export type Plugin = BasePlugin<PrerenderInstance>;

@@ -3,12 +3,12 @@ import { isText } from 'domhandler';
 import fs from 'fs';
 import path from 'path';
 
-import { StackTrace } from './rendererBrowserScripts/out/selectiveDOMChangesCore/types';
+import { StackTrace, StackFrame } from '../rendererBrowserScripts/out/selectiveDOMChangesCore/types';
 
-export { StackTrace };
+export { StackTrace, StackFrame };
 
-const selectiveDOMChangesCorePath = path.resolve(__dirname, 'rendererBrowserScripts/out/selectiveDOMChangesCore/index.js');
-const selectiveDOMChangesAdditionalNodesPath = path.resolve(__dirname, 'rendererBrowserScripts/out/selectiveDOMChangesAdditionalNodes/index.js');
+const selectiveDOMChangesCorePath = path.resolve(__dirname, '../rendererBrowserScripts/out/selectiveDOMChangesCore/index.js');
+const selectiveDOMChangesAdditionalNodesPath = path.resolve(__dirname, '../rendererBrowserScripts/out/selectiveDOMChangesAdditionalNodes/index.js');
 
 const selectiveDOMChangesCoreSource = normalizeNewline(fs.readFileSync(selectiveDOMChangesCorePath).toString());
 const selectiveDOMChangesAdditionalNodesSource = normalizeNewline(fs.readFileSync(selectiveDOMChangesAdditionalNodesPath).toString());

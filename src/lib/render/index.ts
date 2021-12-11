@@ -1,13 +1,14 @@
 import axios from 'axios';
 import puppeteer from 'puppeteer';
 
-import { cleanupContent, modifyHtml, modifyScript, StackTrace } from './selectiveDOMChanges';
+import { cleanupContent, modifyHtml, modifyScript, StackTrace, StackFrame } from './selectiveDOMChanges';
 
 export interface RenderedRoute {
 	html: string;
 	path: string;
 }
 
+export { StackTrace, StackFrame };
 export class RenderInstance {
 	routes: string[];
 	// isAllowedDOMChangeFactory is called per render, because of that there should be no state sharing between returned functions.
