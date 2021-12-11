@@ -1,7 +1,7 @@
 import axios from 'axios';
 import puppeteer from 'puppeteer';
 
-import { cleanupContent, modifyHtml, modifyScript } from './selectiveDOMChanges';
+import { cleanupContent, modifyHtml, modifyScript, StackTrace } from './selectiveDOMChanges';
 
 export interface RenderedRoute {
 	html: string;
@@ -10,20 +10,12 @@ export interface RenderedRoute {
 
 export class RenderInstance {
 	routes: string[];
-	isModuleAllowedForDOMChanges: (moduleName: string) => Promise<boolean>;
-
-	// private pagePlugins = new Map<string, string>();
-	// registerPagePlugin(name: string, source: string): void {
-	// 	if (this.pagePlugins.has(name)) throw new Error(`Page plugin with name: ${name}, already registered`);
-	// 	this.pagePlugins.set(name, source);
-	// }
-
-	// _getPagePlugins(): string[] {
-	// 	return [...this.pagePlugins.values()];
-	// }
+	// isLegalDOMChangeFactory is called per render, because of that there should be no state sharing between returned functions.
+	isLegalDOMChangeFactory: () => (stackTrace: StackTrace) => Promise<boolean>;
 
 	async _validate(): Promise<void> {
-		if (this.routes === undefined) throw new Error('RenderInstance.routes is undefined');
+		if (!(this.routes instanceof Array)) throw new Error('RenderInstance.routes is set to invalid value');
+		if (!(this.isLegalDOMChangeFactory instanceof Function)) throw new Error('RenderInstance.isLegalDOMChangeFactory is set to invalid value');
 	}
 }
 
@@ -43,8 +35,12 @@ export async function render(serverPort: number, renderInstance: RenderInstance)
 	return renderedRoutes;
 }
 
+// Keep in sync with src/lib/rendererBrowserScripts/src/selectiveDOMChangesCore/legal.ts
+const isLegalDOMChangeRoute = '__selectiveDOMChanges__/isLegalDOMChange';
+
 async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: string, renderInstance: RenderInstance): Promise<RenderedRoute> {
 	const page = await browser.newPage();
+	const isLegalDOMChange = renderInstance.isLegalDOMChangeFactory();
 
 	page.on('console', (message) => console.log(message.text()));
 	page.on('pageerror', (err) => console.log(err));
@@ -65,20 +61,28 @@ async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: s
 				const html = await getResponse();
 				const modifiedHtml = modifyHtml(html);
 				await respond(modifiedHtml);
-				break;
+				return;
 			}
 
 			case 'script': {
 				const script = await getResponse();
 				const modifiedScript = modifyScript(script);
 				await respond(modifiedScript);
-				break;
+				return;
 			}
 
-			default:
-				await request.continue();
-				break;
+			case 'xhr': {
+				if (!request.url().includes(isLegalDOMChangeRoute)) break;
+				const postData = request.postData();
+				if (postData === undefined) throw new Error('Invalid post data');
+				const stackTrace = JSON.parse(postData) as StackTrace;
+				const isLegal = await isLegalDOMChange(stackTrace);
+				await request.respond({ body: isLegal === true ? '1' : '0' });
+				return;
+			}
 		}
+
+		await request.continue();
 	});
 
 	await page.goto(`http://${rootUrl}${route}`);

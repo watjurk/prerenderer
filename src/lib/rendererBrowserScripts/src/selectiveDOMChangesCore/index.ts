@@ -1,14 +1,12 @@
 import { ObserveDescriptor } from './changesObserver';
 import { allNodes, isNode, onNodeCreation } from './domHelpers';
 import { ignoreAllObservations } from './ignore';
+import { isLegal, StackFrame, StackTrace } from './legal';
 import { getMetadata } from './metadata';
 import { initObserve, observeNode } from './observe';
-import { getStack } from './stack';
 import { getVDomContent, getCorrespondingVDomNode, syncVDom } from './vdom';
 
-function isLegal(): boolean {
-	return getStack().includes('valid');
-}
+export { StackFrame, StackTrace };
 
 const observeDescriptor: ObserveDescriptor = {
 	onFunctionCallContext(target, property, thisArg, argArray) {

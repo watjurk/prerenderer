@@ -3,6 +3,10 @@ import { isText } from 'domhandler';
 import fs from 'fs';
 import path from 'path';
 
+import { StackTrace } from './rendererBrowserScripts/out/selectiveDOMChangesCore/types';
+
+export { StackTrace };
+
 const selectiveDOMChangesCorePath = path.resolve(__dirname, 'rendererBrowserScripts/out/selectiveDOMChangesCore/index.js');
 const selectiveDOMChangesAdditionalNodesPath = path.resolve(__dirname, 'rendererBrowserScripts/out/selectiveDOMChangesAdditionalNodes/index.js');
 
@@ -10,17 +14,18 @@ const selectiveDOMChangesCoreSource = normalizeNewline(fs.readFileSync(selective
 const selectiveDOMChangesAdditionalNodesSource = normalizeNewline(fs.readFileSync(selectiveDOMChangesAdditionalNodesPath).toString());
 const removeScript = `window.document.currentScript.remove();`;
 
-const prerendererScriptKey = `__prerenderer__`;
-const coreScript = `<script ${prerendererScriptKey}>${selectiveDOMChangesCoreSource}\n${removeScript}</script>`;
-const additionalNodesScript = `<script ${prerendererScriptKey}>${selectiveDOMChangesAdditionalNodesSource}\n${removeScript}</script>`;
+// Keep in sync with src/lib/rendererBrowserScripts/src/selectiveDOMChangesCore/internal.ts
+const internalNodeAttribute = `__prerenderer__`;
+const coreScript = `<script ${internalNodeAttribute}>${selectiveDOMChangesCoreSource}\n${removeScript}</script>`;
+const additionalNodesScript = `<script ${internalNodeAttribute}>${selectiveDOMChangesAdditionalNodesSource}\n${removeScript}</script>`;
 
 export function modifyHtml(html: string): string {
 	const $ = cheerio.load(html);
 	$('head').prepend(coreScript);
 
 	// Insert our script before every script.
-	// Exceptions are scripts with prerendererScriptKey tag.
-	$(`script:not([${prerendererScriptKey}])`).each((i, el) => {
+	// Exceptions are scripts with internalNodeAttribute.
+	$(`script:not([${internalNodeAttribute}])`).each((i, el) => {
 		for (const childNode of el.childNodes) {
 			if (!isText(childNode)) continue;
 			childNode.data = modifyScript(childNode.data);
@@ -48,7 +53,6 @@ export function cleanupContent(html: string): string {
 	$(`script`).each((i, el) => {
 		for (const childNode of el.childNodes) {
 			if (!isText(childNode)) continue;
-			console.log('a');
 			childNode.data = cleanupScript(childNode.data);
 			return;
 		}

@@ -5,7 +5,7 @@
 	"main": "./out",
 	"types": "./out",
 	"scripts": {
-		"clean": "rm -rf out && rm -rf ./node_modules/.cache",
+		"clean": "rm -rf out",
 		"watch": "yarn run clean && yarn run watch:dev",
 		"debug": "yarn run clean && yarn run debug:dev",
 		"build": "yarn run clean && yarn run build:prod",

@@ -15,6 +15,7 @@ export const defaultServerInstance = new ServerInstance();
 export function start(serverInstance: ServerInstance): http.Server {
 	const app = express();
 
+	// Register file provider.
 	app.use(fileProviderHandler(serverInstance.fileProvider));
 
 	// You can bind to a random, free port assigned by the OS by specifying 0 for the port.
