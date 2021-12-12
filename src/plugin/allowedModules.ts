@@ -1,4 +1,4 @@
-import { Plugin, PrerenderInstance, StackTrace } from '@/prerender';
+import { Plugin, PrerenderInstance, StackTrace } from '@/instance';
 
 export interface Options {
 	moduleNameProvider: (stackTrace: StackTrace) => Promise<string> | string;

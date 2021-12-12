@@ -1,6 +1,6 @@
 import { render, RenderedRoute } from './lib/render';
 import { getPort, start as startServer } from './lib/server';
-import { PrerenderInstance, Plugin } from './prerender';
+import { PrerenderInstance, Plugin } from './instance';
 
 async function prerender(plugins: Plugin[]): Promise<RenderedRoute[]> {
 	const prerenderInstance = new PrerenderInstance();

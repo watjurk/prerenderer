@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { Plugin, PrerenderInstance } from '@/prerender';
+import { Plugin, PrerenderInstance } from '@/instance';
 
 export class DiskFileProvider implements Plugin {
 	readonly name = 'DiscFileProvider';

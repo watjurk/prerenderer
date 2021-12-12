@@ -1,4 +1,4 @@
-import { Plugin, PrerenderInstance } from '@/prerender';
+import { Plugin, PrerenderInstance } from '@/instance';
 
 export class UserDefinedRoutes implements Plugin {
 	readonly name = 'UserDefinedRoutes';
