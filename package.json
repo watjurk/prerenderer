@@ -10,7 +10,7 @@
 		"build": "yarn run clean && yarn run lint && tsc && tsc-alias",
 		"lint": "eslint .",
 		"release": "yarn run build && yarn publish --access public --non-interactive",
-		"postinstall": "yarn --cwd ./src/lib/rendererBrowserScripts install",
+		"postinstall": "node ./tools/skip-npm-postinstall.js ||  yarn --cwd ./src/lib/rendererBrowserScripts install",
 		"moveRendererBrowserScripts": "yarn run buildRendererBrowserScripts && mkdir -p ./out/lib/rendererBrowserScripts/out && cp -r ./src/lib/rendererBrowserScripts/out ./out/lib/rendererBrowserScripts",
 		"buildRendererBrowserScripts": "yarn --cwd ./src/lib/rendererBrowserScripts run build:prod"
 	},
