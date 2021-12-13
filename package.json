@@ -1,6 +1,6 @@
 {
 	"name": "@watj/prerenderer",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"license": "MIT",
 	"scripts": {
 		"clean": "rm -rf out && yarn run moveRendererBrowserScripts",
