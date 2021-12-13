@@ -69,7 +69,8 @@ export function cleanupHtml(html: string): string {
 }
 
 function prepareSource(source: string): string {
-	return addInternalSourceComment(normalizeNewline(source));
+	// Add new lines to make some space between our code and user code.
+	return addInternalSourceComment(normalizeNewline(source)) + '\n\n\n';
 }
 
 function normalizeNewline(s: string): string {
