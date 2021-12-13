@@ -43,9 +43,9 @@ async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: s
 	const page = await browser.newPage();
 	const isAllowedDOMChange = renderInstance.isAllowedDOMChangeFactory();
 
-	// Leave this for now.
-	page.on('console', (message) => console.log(message.text()));
-	page.on('pageerror', (err) => console.log(err));
+	// // Leave this for now.
+	// page.on('console', (message) => console.log(message.text()));
+	// page.on('pageerror', (err) => console.log(err));
 
 	page.setRequestInterception(true);
 	page.on('request', async (request) => {
