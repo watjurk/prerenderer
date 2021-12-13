@@ -3,9 +3,15 @@ import { isText } from 'domhandler';
 import fs from 'fs';
 import path from 'path';
 
-import { StackTrace, StackFrame } from '../rendererBrowserScripts/out/selectiveDOMChangesCore/types';
+// Keep in sync with src/lib/rendererBrowserScripts/src/selectiveDOMChangesCore/allowedDOMChange.ts
+export interface StackFrame {
+	columnNumber: number;
+	lineNumber: number;
+	fileName: string;
+}
 
-export { StackTrace, StackFrame };
+// Keep in sync with src/lib/rendererBrowserScripts/src/selectiveDOMChangesCore/allowedDOMChange.ts
+export type StackTrace = StackFrame[];
 
 const selectiveDOMChangesCorePath = path.resolve(__dirname, '../rendererBrowserScripts/out/selectiveDOMChangesCore/index.js');
 const selectiveDOMChangesAdditionalNodesPath = path.resolve(__dirname, '../rendererBrowserScripts/out/selectiveDOMChangesAdditionalNodes/index.js');

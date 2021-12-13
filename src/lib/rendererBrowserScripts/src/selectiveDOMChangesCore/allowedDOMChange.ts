@@ -1,10 +1,13 @@
 import { getSync } from 'stacktrace-js';
 
+// Keep in sync with src/lib/render/selectiveDOMChanges.ts
 export interface StackFrame {
 	columnNumber: number;
 	lineNumber: number;
 	fileName: string;
 }
+
+// Keep in sync with src/lib/render/selectiveDOMChanges.ts
 export type StackTrace = StackFrame[];
 
 // Keep in sync with src/lib/render.ts
