@@ -1,8 +1,12 @@
+import { PrerenderInstance, Plugin } from './instance';
 import { render, RenderedRoute } from './lib/render';
 import { getPort, start as startServer } from './lib/server';
-import { PrerenderInstance, Plugin } from './instance';
+// Plugins to be exported so users have easy access to them
+import { AllowedModules } from './plugin/allowedModules';
+import { DiskFileProvider } from './plugin/diskFileProvider';
+import { UserDefinedRoutes } from './plugin/userDefinedRoutes';
 
-async function prerender(plugins: Plugin[]): Promise<RenderedRoute[]> {
+export async function prerender(plugins: Plugin[]): Promise<RenderedRoute[]> {
 	const prerenderInstance = new PrerenderInstance();
 	const pluginPromises = [];
 	for (const plugin of plugins) pluginPromises.push(plugin.execute(prerenderInstance));
@@ -21,4 +25,9 @@ async function prerender(plugins: Plugin[]): Promise<RenderedRoute[]> {
 	return renderedRoutes;
 }
 
-export default prerender;
+export const plugins = {
+	AllowedModules,
+	DiskFileProvider,
+	UserDefinedRoutes,
+};
+export { Plugin, PrerenderInstance };
