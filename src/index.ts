@@ -11,10 +11,6 @@ export async function prerender(plugins: Plugin[]): Promise<RenderedRoute[]> {
 	const pluginPromises = [];
 	for (const plugin of plugins) pluginPromises.push(plugin.execute(prerenderInstance));
 	await Promise.all(pluginPromises);
-
-	prerenderInstance.render.isAllowedDOMChangeFactory = () => (): boolean => {
-		return true;
-	};
 	await prerenderInstance._validate();
 
 	const server = startServer(prerenderInstance.server);
