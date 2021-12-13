@@ -3,7 +3,7 @@ import http from 'http';
 import parseUrl from 'parseurl';
 
 export class ServerInstance {
-	fileProvider: (path: string) => Promise<string>;
+	fileProvider: (path: string) => Promise<string> | string;
 
 	async _validate(): Promise<void> {
 		if (typeof this.fileProvider !== 'function') throw new Error('ServerInstance.fileProvider is not a function');
