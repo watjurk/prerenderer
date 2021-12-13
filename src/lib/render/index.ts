@@ -1,7 +1,9 @@
 import axios from 'axios';
 import puppeteer from 'puppeteer';
 
-import { cleanupContent, modifyHtml, modifyScript, StackTrace, StackFrame } from './selectiveDOMChanges';
+import { normalizeURL } from '@/lib/server';
+
+import { cleanupHtml, modifyHtml, modifyScript, StackTrace, StackFrame, isInternalLine } from './selectiveDOMChanges';
 
 export interface RenderedRoute {
 	html: string;
@@ -21,9 +23,7 @@ export class RenderInstance {
 }
 
 export async function render(serverPort: number, renderInstance: RenderInstance): Promise<RenderedRoute[]> {
-	const browser = await puppeteer.launch({
-		devtools: false,
-	});
+	const browser = await puppeteer.launch();
 	const rootUrl = `localhost:${serverPort}`;
 
 	const renderRoutesPromises = [];
@@ -40,13 +40,11 @@ export async function render(serverPort: number, renderInstance: RenderInstance)
 const isAllowedDOMChangeRoute = '__selectiveDOMChanges__/isAllowedDOMChange';
 
 async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: string, renderInstance: RenderInstance): Promise<RenderedRoute> {
+	const pageURL = normalizeURL(`http://${rootUrl}${route}`);
 	const page = await browser.newPage();
 	const isAllowedDOMChange = renderInstance.isAllowedDOMChangeFactory();
 
-	// // Leave this for now.
-	// page.on('console', (message) => console.log(message.text()));
-	// page.on('pageerror', (err) => console.log(err));
-
+	let indexHTMLLines: string[];
 	page.setRequestInterception(true);
 	page.on('request', async (request) => {
 		const getResponse = async (): Promise<string> => {
@@ -60,8 +58,11 @@ async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: s
 
 		switch (request.resourceType()) {
 			case 'document': {
+				// Modify only root index.html.
+				if (request.url() !== pageURL) break;
 				const html = await getResponse();
 				const modifiedHtml = modifyHtml(html);
+				indexHTMLLines = modifiedHtml.split('\n');
 				await respond(modifiedHtml);
 				return;
 			}
@@ -78,7 +79,18 @@ async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: s
 				const postData = request.postData();
 				if (postData === undefined) throw new Error('Invalid post data');
 				const stackTrace = JSON.parse(postData) as StackTrace;
-				const isAllowed = await isAllowedDOMChange(stackTrace);
+
+				const filteredStackTrace: StackTrace = [];
+				for (const frame of stackTrace) {
+					if (frame.fileName === pageURL) {
+						// This -1 accounts for that that the page starts counting lines from 1, but array for 0.
+						if (!isInternalLine(indexHTMLLines[frame.lineNumber - 1])) filteredStackTrace.push(frame);
+					} else {
+						filteredStackTrace.push(frame);
+					}
+				}
+
+				const isAllowed = await isAllowedDOMChange(filteredStackTrace);
 				await request.respond({ body: isAllowed === true ? '1' : '0' });
 				return;
 			}
@@ -87,11 +99,11 @@ async function renderRoute(browser: puppeteer.Browser, rootUrl: string, route: s
 		await request.continue();
 	});
 
-	await page.goto(`http://${rootUrl}${route}`);
+	await page.goto(pageURL);
 	await page.waitForNetworkIdle();
 
 	const content = (await page.evaluate('window.selectiveDOMChangesCore.api.getVDomContent()')) as string;
 	await page.close();
 
-	return { html: cleanupContent(content), path: route };
+	return { html: cleanupHtml(content), path: route };
 }

@@ -16,9 +16,10 @@ export type StackTrace = StackFrame[];
 const selectiveDOMChangesCorePath = path.resolve(__dirname, '../rendererBrowserScripts/out/selectiveDOMChangesCore/index.js');
 const selectiveDOMChangesAdditionalNodesPath = path.resolve(__dirname, '../rendererBrowserScripts/out/selectiveDOMChangesAdditionalNodes/index.js');
 
-const selectiveDOMChangesCoreSource = normalizeNewline(fs.readFileSync(selectiveDOMChangesCorePath).toString());
-const selectiveDOMChangesAdditionalNodesSource = normalizeNewline(fs.readFileSync(selectiveDOMChangesAdditionalNodesPath).toString());
-const removeScript = `window.document.currentScript.remove();`;
+const internalSourceCodeComment = '// __prerenderer__internal_code__ ';
+const selectiveDOMChangesCoreSource = prepareSource(fs.readFileSync(selectiveDOMChangesCorePath).toString());
+const selectiveDOMChangesAdditionalNodesSource = prepareSource(fs.readFileSync(selectiveDOMChangesAdditionalNodesPath).toString());
+const removeScript = prepareSource(`window.document.currentScript.remove();`);
 
 // Keep in sync with src/lib/rendererBrowserScripts/src/selectiveDOMChangesCore/internal.ts
 const internalNodeAttribute = `__prerenderer__`;
@@ -53,7 +54,7 @@ function cleanupScript(script: string): string {
 	return script.replace(selectiveDOMChangesAdditionalNodesSource, '');
 }
 
-export function cleanupContent(html: string): string {
+export function cleanupHtml(html: string): string {
 	const $ = cheerio.load(html);
 
 	$(`script`).each((i, el) => {
@@ -67,6 +68,21 @@ export function cleanupContent(html: string): string {
 	return $.html();
 }
 
+function prepareSource(source: string): string {
+	return addInternalSourceComment(normalizeNewline(source));
+}
+
 function normalizeNewline(s: string): string {
 	return s.replaceAll('\r\n', '\n');
+}
+
+function addInternalSourceComment(source: string): string {
+	return source
+		.split('\n')
+		.map((line) => line + ' ' + internalSourceCodeComment)
+		.join('\n');
+}
+
+export function isInternalLine(line: string): boolean {
+	return line.substring(line.length - internalSourceCodeComment.length) === internalSourceCodeComment;
 }

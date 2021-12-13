@@ -31,6 +31,12 @@ export function getPort(server: http.Server): number {
 	throw new Error('Unexpected address');
 }
 
+export function normalizeURL(urlPath: string): string {
+	if (urlPath.endsWith('/')) urlPath += 'index.html';
+	if (urlPath.startsWith('/')) urlPath = urlPath.substring(1);
+	return urlPath;
+}
+
 function fileProviderHandler(fileProvider: ServerInstance['fileProvider']): RequestHandler {
 	return async function (request, response): Promise<void> {
 		const url = parseUrl(request);
@@ -43,9 +49,7 @@ function fileProviderHandler(fileProvider: ServerInstance['fileProvider']): Requ
 			return;
 		}
 
-		let path = url.pathname;
-		if (path.endsWith('/')) path += 'index.html';
-		if (path.startsWith('/')) path = path.substring(1);
+		const path = normalizeURL(url.pathname);
 
 		let file: string | null = null;
 		try {
