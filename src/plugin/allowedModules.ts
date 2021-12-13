@@ -1,7 +1,7 @@
-import { Plugin, PrerenderInstance, StackTrace } from '@/instance';
+import { Plugin, PrerenderInstance, StackFrame, StackTrace } from '@/instance';
 
 export interface Options {
-	moduleNameProvider: (stackTrace: StackTrace) => Promise<string> | string;
+	moduleNameProvider: (stackFrame: StackFrame) => Promise<string> | string;
 
 	isAllowed?: (moduleName: string) => Promise<boolean> | boolean;
 	allowedModules?: string[];
@@ -34,7 +34,7 @@ export class AllowedModules implements Plugin {
 	async execute(prerenderInstance: PrerenderInstance): Promise<void> {
 		prerenderInstance.render.isAllowedDOMChangeFactory = () => {
 			return async (stackTrace: StackTrace): Promise<boolean> => {
-				const moduleName = await this.moduleNameProvider(stackTrace);
+				const moduleName = await this.moduleNameProvider(stackTrace[stackTrace.length - 1]);
 				return this.isAllowed(moduleName);
 			};
 		};
