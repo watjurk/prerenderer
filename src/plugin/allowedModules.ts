@@ -34,7 +34,7 @@ export class AllowedModules implements Plugin {
 	async execute(prerenderInstance: PrerenderInstance): Promise<void> {
 		prerenderInstance.render.isAllowedDOMChangeFactory = () => {
 			return async (stackTrace: StackTrace): Promise<boolean> => {
-				const moduleName = await this.moduleNameProvider(stackTrace[stackTrace.length - 1]);
+				const moduleName = await this.moduleNameProvider(stackTrace[0]);
 				return this.isAllowed(moduleName);
 			};
 		};
