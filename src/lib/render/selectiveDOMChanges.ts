@@ -18,55 +18,12 @@ const selectiveDOMChangesAdditionalNodesPath = path.resolve(__dirname, '../rende
 
 const internalSourceCodeComment = '// __prerenderer__internal_code__ ';
 const selectiveDOMChangesCoreSource = prepareSource(fs.readFileSync(selectiveDOMChangesCorePath).toString());
+const selectiveDOMChangesCoreSourceLines = selectiveDOMChangesCoreSource.split('\n');
+
 const selectiveDOMChangesAdditionalNodesSource = prepareSource(fs.readFileSync(selectiveDOMChangesAdditionalNodesPath).toString());
+const selectiveDOMChangesAdditionalNodesSourceLines = selectiveDOMChangesAdditionalNodesSource.split('\n');
+
 const removeScript = prepareSource(`window.document.currentScript.remove();`);
-
-// Keep in sync with src/lib/rendererBrowserScripts/src/selectiveDOMChangesCore/internal.ts
-const internalNodeAttribute = `__prerenderer__`;
-const coreScript = `<script ${internalNodeAttribute}>${selectiveDOMChangesCoreSource}\n${removeScript}</script>`;
-const additionalNodesScript = `<script ${internalNodeAttribute}>${selectiveDOMChangesAdditionalNodesSource}\n${removeScript}</script>`;
-
-export function modifyHtml(html: string): string {
-	const $ = cheerio.load(html);
-	$('head').prepend(coreScript);
-
-	// Insert our script before every script.
-	// Exceptions are scripts with internalNodeAttribute.
-	$(`script:not([${internalNodeAttribute}])`).each((i, el) => {
-		for (const childNode of el.childNodes) {
-			if (!isText(childNode)) continue;
-			childNode.data = modifyScript(childNode.data);
-			return;
-		}
-	});
-
-	// Insert our script as last in body so all nodes are catched.
-	$('body').append(additionalNodesScript);
-
-	return $.html();
-}
-
-export function modifyScript(script: string): string {
-	return selectiveDOMChangesAdditionalNodesSource + script;
-}
-
-function cleanupScript(script: string): string {
-	return script.replace(selectiveDOMChangesAdditionalNodesSource, '');
-}
-
-export function cleanupHtml(html: string): string {
-	const $ = cheerio.load(html);
-
-	$(`script`).each((i, el) => {
-		for (const childNode of el.childNodes) {
-			if (!isText(childNode)) continue;
-			childNode.data = cleanupScript(childNode.data);
-			return;
-		}
-	});
-
-	return $.html();
-}
 
 function prepareSource(source: string): string {
 	// Add new lines to make some space between our code and user code.
@@ -84,6 +41,99 @@ function addInternalSourceComment(source: string): string {
 		.join('\n');
 }
 
-export function isInternalLine(line: string): boolean {
+// Keep in sync with src/lib/rendererBrowserScripts/src/selectiveDOMChangesCore/internal.ts
+const internalNodeAttribute = `__prerenderer__`;
+const coreScript = `<script ${internalNodeAttribute}>${selectiveDOMChangesCoreSource}\n${removeScript}</script>`;
+const additionalNodesScript = `<script ${internalNodeAttribute}>${selectiveDOMChangesAdditionalNodesSource}\n${removeScript}</script>`;
+
+export class SelectiveDOMChanges {
+	private pageUrl: string;
+	private pageHtml: string;
+
+	private modifiedHtml: string;
+	private modifiedHtmlLines: string[];
+	constructor(pageUrl: string, pageHtml: string) {
+		this.pageUrl = pageUrl;
+		this.pageHtml = pageHtml;
+		this.modifiedHtml = modifyHtml(this.pageHtml);
+		this.modifiedHtmlLines = this.modifiedHtml.split('\n');
+	}
+
+	modifyScriptSource(script: string): string {
+		return modifyScriptSource(script);
+	}
+
+	getModifiedHtml(): string {
+		return this.modifiedHtml;
+	}
+
+	cleanupRenderedHtml(html: string): string {
+		return cleanupRenderedHtml(html);
+	}
+
+	convertStackTrace(stackTrace: StackTrace): StackTrace {
+		const filteredStackTrace: StackTrace = [];
+		for (const frame of stackTrace) {
+			if (frame.fileName === this.pageUrl) {
+				// This -1 accounts for that that the page starts counting lines from 1, but array for 0.
+				if (isInternalLine(this.modifiedHtmlLines[frame.lineNumber - 1])) continue;
+
+				// TODO: Fix frame.lineNumber
+				filteredStackTrace.push(frame);
+				continue;
+			}
+
+			// Account for us adding additional content
+			frame.lineNumber -= selectiveDOMChangesAdditionalNodesSourceLines.length - 1;
+			filteredStackTrace.push(frame);
+		}
+
+		return filteredStackTrace;
+	}
+}
+
+function modifyHtml(html: string): string {
+	const $ = cheerio.load(html);
+	$('head').prepend(coreScript);
+
+	// Insert our script before every script.
+	// Exceptions are scripts with internalNodeAttribute.
+	$(`script:not([${internalNodeAttribute}])`).each((i, el) => {
+		for (const childNode of el.childNodes) {
+			if (!isText(childNode)) continue;
+			childNode.data = modifyScriptSource(childNode.data);
+			return;
+		}
+	});
+
+	// Insert our script as last in body so all nodes are catched.
+	$('body').append(additionalNodesScript);
+
+	return $.html();
+}
+
+function modifyScriptSource(script: string): string {
+	return selectiveDOMChangesAdditionalNodesSource + script;
+}
+
+function cleanupScript(script: string): string {
+	return script.replace(selectiveDOMChangesAdditionalNodesSource, '');
+}
+
+function cleanupRenderedHtml(html: string): string {
+	const $ = cheerio.load(html);
+
+	$(`script`).each((i, el) => {
+		for (const childNode of el.childNodes) {
+			if (!isText(childNode)) continue;
+			childNode.data = cleanupScript(childNode.data);
+			return;
+		}
+	});
+
+	return $.html();
+}
+
+function isInternalLine(line: string): boolean {
 	return line.substring(line.length - internalSourceCodeComment.length) === internalSourceCodeComment;
 }
