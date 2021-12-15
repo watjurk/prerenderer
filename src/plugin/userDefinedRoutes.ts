@@ -1,10 +1,11 @@
 import { Plugin, PrerenderInstance } from '@/instance';
+import { Route } from '@/lib/render';
 
 export class UserDefinedRoutes implements Plugin {
 	readonly name = 'UserDefinedRoutes';
 
-	routes: string[];
-	constructor(routes: string[]) {
+	routes: Route[];
+	constructor(routes: Route[]) {
 		this.routes = routes;
 	}
 

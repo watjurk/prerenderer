@@ -47,13 +47,13 @@ const coreScript = `<script ${internalNodeAttribute}>${selectiveDOMChangesCoreSo
 const additionalNodesScript = `<script ${internalNodeAttribute}>${selectiveDOMChangesAdditionalNodesSource}\n${removeScript}</script>`;
 
 export class SelectiveDOMChanges {
-	private pageUrl: string;
+	private pageServerURL: string;
 	private pageHtml: string;
 
 	private modifiedHtml: string;
 	private modifiedHtmlLines: string[];
-	constructor(pageUrl: string, pageHtml: string) {
-		this.pageUrl = pageUrl;
+	constructor(pageServerURL: string, pageHtml: string) {
+		this.pageServerURL = pageServerURL;
 		this.pageHtml = pageHtml;
 		this.modifiedHtml = modifyHtml(this.pageHtml);
 		this.modifiedHtmlLines = this.modifiedHtml.split('\n');
@@ -74,7 +74,7 @@ export class SelectiveDOMChanges {
 	convertStackTrace(stackTrace: StackTrace): StackTrace {
 		const filteredStackTrace: StackTrace = [];
 		for (const frame of stackTrace) {
-			if (frame.fileName === this.pageUrl) {
+			if (frame.fileName === this.pageServerURL) {
 				// This -1 accounts for that that the page starts counting lines from 1, but array for 0.
 				if (isInternalLine(this.modifiedHtmlLines[frame.lineNumber - 1])) continue;
 
