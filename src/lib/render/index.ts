@@ -81,9 +81,9 @@ const isAllowedDOMChangeRoute = '__selectiveDOMChanges__/isAllowedDOMChange';
 
 async function renderRoute(browser: puppeteer.Browser, rootURL: string, route: Route, renderInstance: RenderInstance): Promise<RenderedRoute> {
 	const NRoute = normalizeRoute(route);
-	const pageServerURL = normalizeURL(`${rootURL}${NRoute.serverPath}`);
 
-	const pageURL = normalizeURL(`${rootURL}${NRoute.path}`);
+	const pageServerURL = `${rootURL}${NRoute.serverPath}`;
+	const pageURL = `${rootURL}${NRoute.path}`;
 
 	// When URL contains # then browser will only send a request with URL part before #.
 	// We need to account for that.
