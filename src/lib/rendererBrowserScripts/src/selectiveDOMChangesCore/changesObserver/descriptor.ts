@@ -1,56 +1,74 @@
-import { isIgnored } from '@/selectiveDOMChangesCore/ignore';
+import { isIgnored } from './ignore';
+import { DeepProperty } from './objectHelpers';
 
-export type ObserveDescriptor = Partial<NObserveDescriptorInterface>;
-interface NObserveDescriptorInterface {
-	onFunctionCallContext(target: any, property: PropertyKey, thisArg: unknown, argArray: unknown[]): { before: () => void; after: (returnValue: unknown) => void } | void;
-	onPropertyGetContext(target: any, property: PropertyKey): { before: () => void; after: (value: unknown) => void } | void;
-	onPropertySetContext(target: any, property: PropertyKey, value: unknown): { before: () => void; after: () => void } | void;
+export type ObserveDescriptor = Partial<{
+	[Property in keyof NObserveDescriptor]: (...args: Parameters<NObserveDescriptor[Property]>) => ReturnType<NObserveDescriptor[Property]> | void;
+}>;
+
+interface FunctionCallContext {
+	before: () => void;
+	after: (returnValue: unknown) => void;
+}
+interface PropertyGetContext {
+	before: () => void;
+	after: (value: unknown) => void;
+}
+interface PropertySetContext {
+	before: () => void;
+	after: () => void;
+}
+interface PropertySetContext {
+	before: () => void;
+	after: () => void;
 }
 
-export interface ObservationContext<beforeArgs extends any[] = [], afterArgs extends any[] = []> {
-	before: (...args: beforeArgs) => void;
-	after: (...args: afterArgs) => void;
+export interface NObserveDescriptor {
+	onFunctionCallContext(target: any, property: PropertyKey, thisArg: unknown, argArray: unknown[]): FunctionCallContext;
+	onPropertyGetContext(target: any, property: PropertyKey): PropertyGetContext;
+	onPropertySetContext(target: any, property: PropertyKey, value: unknown): PropertySetContext;
+
+	onDeepFunctionCallContext(target: any, deepTarget: any, deepProperty: DeepProperty, thisArg: unknown, argArray: unknown[]): FunctionCallContext;
+	onDeepPropertyGetContext(target: any, deepTarget: any, deepProperty: DeepProperty): PropertyGetContext;
+	onDeepPropertySetContext(target: any, deepTarget: any, deepProperty: DeepProperty, value: unknown): PropertySetContext;
 }
 
-const noopContext = () => ({
+const noopContextFunction = () => ({
 	before: () => undefined,
 	after: () => undefined,
 });
+const noopContext = noopContextFunction();
 
-type NonVoidable<T> = T extends void ? never : T;
-export class NObserveDescriptor implements NObserveDescriptorInterface {
-	private observeDescriptor: NObserveDescriptorInterface;
-	constructor(observeDescriptor: ObserveDescriptor) {
-		this.observeDescriptor = normalizeObserveDescriptor(observeDescriptor);
+type NObserveDescriptorKeyType = keyof NObserveDescriptor;
+const NObserveDescriptorKeys = [
+	'onFunctionCallContext',
+	'onPropertyGetContext',
+	'onPropertySetContext',
+	'onDeepFunctionCallContext',
+	'onDeepPropertyGetContext',
+	'onDeepPropertySetContext',
+] as NObserveDescriptorKeyType[];
+
+export function normalizeObserveDescriptor(observeDescriptor: ObserveDescriptor): NObserveDescriptor {
+	let nObserveDescriptor = {} as NObserveDescriptor;
+
+	let key: NObserveDescriptorKeyType;
+	for (key of NObserveDescriptorKeys) {
+		const originalFn = observeDescriptor[key];
+		if (originalFn === undefined) {
+			nObserveDescriptor[key] = noopContextFunction;
+			continue;
+		}
+
+		// @ts-ignore
+		nObserveDescriptor[key] = function () {
+			if (isIgnored()) return noopContext;
+
+			// @ts-ignore
+			const originalReturnValue = originalFn.apply(this, arguments);
+
+			return originalReturnValue ?? noopContext;
+		};
 	}
 
-	onFunctionCallContext(
-		target: any,
-		property: PropertyKey,
-		thisArg: unknown,
-		argArray: unknown[],
-	): NonVoidable<ReturnType<NObserveDescriptorInterface['onFunctionCallContext']>> {
-		if (isIgnored()) return noopContext();
-		return this.observeDescriptor.onFunctionCallContext.call(this, target, property, thisArg, argArray) ?? noopContext();
-	}
-
-	onPropertyGetContext(target: any, property: PropertyKey): NonVoidable<ReturnType<NObserveDescriptorInterface['onPropertyGetContext']>> {
-		if (isIgnored()) return noopContext();
-		return this.observeDescriptor.onPropertyGetContext.call(this, target, property) ?? noopContext();
-	}
-
-	onPropertySetContext(target: any, property: PropertyKey, value: unknown): NonVoidable<ReturnType<NObserveDescriptorInterface['onPropertySetContext']>> {
-		if (isIgnored()) return noopContext();
-		return this.observeDescriptor.onPropertySetContext.call(this, target, property, value) ?? noopContext();
-	}
-}
-
-function normalizeObserveDescriptor(observeDescriptor: ObserveDescriptor): NObserveDescriptorInterface {
-	const NObserveDescriptor: NObserveDescriptorInterface = {
-		onFunctionCallContext: observeDescriptor.onFunctionCallContext ?? noopContext,
-		onPropertyGetContext: observeDescriptor.onPropertyGetContext ?? noopContext,
-		onPropertySetContext: observeDescriptor.onPropertySetContext ?? noopContext,
-	};
-
-	return NObserveDescriptor;
+	return nObserveDescriptor;
 }

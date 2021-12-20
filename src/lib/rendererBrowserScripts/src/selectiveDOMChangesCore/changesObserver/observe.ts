@@ -1,11 +1,28 @@
-import { NObserveDescriptor, ObserveDescriptor } from './descriptor';
+import { NObserveDescriptor, normalizeObserveDescriptor, ObserveDescriptor } from './descriptor';
+import { isIgnored } from './ignore';
 import * as objectHelpers from './objectHelpers';
 
-export function observe(target: any, ObserveDescriptor: ObserveDescriptor): void {
-	const nObserveDescriptor = new NObserveDescriptor(ObserveDescriptor);
-	const targetPrototypePropertyKeys = objectHelpers.getPrototypePropertyKeys(target);
+const observedSymbol = Symbol('observe.already_observed');
+
+export function observe(target: any, observeDescriptor: ObserveDescriptor, deep: boolean = false): void {
+	// Don't observe object twice.
+	if (target[observedSymbol] === true) {
+		// TODO: Make something with observeDescriptor, connect it to the already observed one?
+		return;
+	}
+
+	// Mark object as observed.
+	Object.defineProperty(target, observedSymbol, {
+		configurable: false,
+		enumerable: false,
+		writable: false,
+		value: true,
+	});
+
+	const nObserveDescriptor = normalizeObserveDescriptor(observeDescriptor);
 
 	// This section observes properties not owned by target, but by target prototypes.
+	const targetPrototypePropertyKeys = objectHelpers.getPrototypePropertyKeys(target);
 	const mockPrototype = Object.create(null);
 
 	const mockPrototypeNameKey = Symbol('prototype_name');
@@ -31,9 +48,16 @@ export function observe(target: any, ObserveDescriptor: ObserveDescriptor): void
 				let v = getProperty(prototype, propertyKey, this);
 				onPropertyGetContext.after(v);
 
-				if (typeof v === 'function') {
-					v = observeFunctionCall(v, target, propertyKey, nObserveDescriptor);
+				if (!isIgnored()) {
+					if (deep && objectHelpers.isObject(v)) {
+						deepObserve(v, target, propertyKey, nObserveDescriptor);
+					}
+
+					if (typeof v === 'function') {
+						v = observeFunctionCall(v, target, propertyKey, nObserveDescriptor);
+					}
 				}
+
 				return v;
 			},
 
@@ -44,6 +68,10 @@ export function observe(target: any, ObserveDescriptor: ObserveDescriptor): void
 				const prototype = objectHelpers.getPrototypeAfter(this, mockPrototype);
 				setProperty(prototype, propertyKey, v, this);
 				onPropertySetContext.after();
+
+				if (deep && objectHelpers.isObject(v) && !isIgnored()) {
+					deepObserve(v, target, propertyKey, nObserveDescriptor);
+				}
 			},
 		});
 	}
@@ -68,11 +96,16 @@ export function observe(target: any, ObserveDescriptor: ObserveDescriptor): void
 
 	for (const propertyKey of targetPropertyKeys) {
 		const propertyDescriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
-		if (propertyDescriptor === undefined) throw 'WTF';
+		if (propertyDescriptor === undefined) throw 'Undefined property descriptor, but keys are from getOwnPropertyKeys, should never happen.';
 		Object.defineProperty(originalProperties, propertyKey, propertyDescriptor);
 
+		// TODO: Provide fallback?
 		// We are not able to redefine non configurable properties.
 		if (propertyDescriptor.configurable === false) continue;
+
+		// TODO: Provide fallback?
+		// We are not able to redefine non writable properties.
+		if (propertyDescriptor.writable === false) continue;
 
 		Object.defineProperty(target, propertyKey, {
 			get(): unknown {
@@ -83,9 +116,16 @@ export function observe(target: any, ObserveDescriptor: ObserveDescriptor): void
 				let v = getProperty(originalProperties, propertyKey, this);
 				onPropertyGetContext.after(v);
 
-				if (typeof v === 'function') {
-					v = observeFunctionCall(v, target, propertyKey, nObserveDescriptor);
+				if (!isIgnored()) {
+					if (deep && objectHelpers.isObject(v)) {
+						deepObserve(v, target, propertyKey, nObserveDescriptor);
+					}
+
+					if (typeof v === 'function') {
+						v = observeFunctionCall(v, target, propertyKey, nObserveDescriptor);
+					}
 				}
+
 				return v;
 			},
 			set(v: unknown) {
@@ -95,6 +135,10 @@ export function observe(target: any, ObserveDescriptor: ObserveDescriptor): void
 				const originalProperties = this[originalPropertiesKey];
 				setProperty(originalProperties, propertyKey, v, this);
 				onPropertySetContext.after();
+
+				if (deep && objectHelpers.isObject(v) && !isIgnored()) {
+					deepObserve(v, target, propertyKey, nObserveDescriptor);
+				}
 			},
 		});
 	}
@@ -134,4 +178,38 @@ function setProperty(object: any, propertyKey: PropertyKey, v: any, setterThisCo
 	if (propertyDescriptor === undefined) throw new Error('propertyDescriptor cannot be undefined');
 	else if (propertyDescriptor.set !== undefined) propertyDescriptor.set.call(setterThisContext, v);
 	else object[propertyKey] = v;
+}
+
+function deepObserve(object: any, target: any, propertyKey: PropertyKey, nObserveDescriptor: NObserveDescriptor): void {
+	observe(
+		object,
+		{
+			onFunctionCallContext(deepTarget, deepPropertyKey, thisArg, argArray) {
+				const deepProperty = [propertyKey, deepPropertyKey];
+				return nObserveDescriptor.onDeepFunctionCallContext(target, deepTarget, deepProperty, thisArg, argArray);
+			},
+			onPropertyGetContext(deepTarget, deepPropertyKey) {
+				const deepProperty = [propertyKey, deepPropertyKey];
+				return nObserveDescriptor.onDeepPropertyGetContext(target, deepTarget, deepProperty);
+			},
+			onPropertySetContext(deepTarget, deepPropertyKey, value) {
+				const deepProperty = [propertyKey, deepPropertyKey];
+				return nObserveDescriptor.onDeepPropertySetContext(target, deepTarget, deepProperty, value);
+			},
+
+			onDeepFunctionCallContext(middleTarget, deepTarget, deepProperty, thisArg, argArray) {
+				deepProperty = [propertyKey, ...deepProperty];
+				return nObserveDescriptor.onDeepFunctionCallContext(target, deepTarget, deepProperty, thisArg, argArray);
+			},
+			onDeepPropertyGetContext(middleTarget, deepTarget, deepProperty) {
+				deepProperty = [propertyKey, ...deepProperty];
+				return nObserveDescriptor.onDeepPropertyGetContext(target, deepTarget, deepProperty);
+			},
+			onDeepPropertySetContext(middleTarget, deepTarget, deepProperty, value) {
+				deepProperty = [propertyKey, ...deepProperty];
+				return nObserveDescriptor.onDeepPropertySetContext(target, deepTarget, deepProperty, value);
+			},
+		},
+		true,
+	);
 }

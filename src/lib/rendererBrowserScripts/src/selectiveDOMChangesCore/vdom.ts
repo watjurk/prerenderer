@@ -1,5 +1,5 @@
 import { allNodes } from './domHelpers';
-import { ignoreAllObservations } from './ignore';
+import { ignoreAllObservations } from './changesObserver';
 import { isInternalNode } from './internal';
 import { getMetadata } from './metadata';
 

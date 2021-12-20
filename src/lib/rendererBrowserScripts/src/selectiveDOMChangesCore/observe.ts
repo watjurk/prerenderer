@@ -1,5 +1,4 @@
-import { observe, ObserveDescriptor } from './changesObserver';
-import { ignoreAllObservations } from './ignore';
+import { observe, ObserveDescriptor,ignoreAllObservations } from './changesObserver';
 import { isInternalNode } from './internal';
 import { getMetadata } from './metadata';
 
@@ -18,6 +17,6 @@ export function observeNode(node: Node) {
 		// Don't observe prerender internal nodes - they clean after themselves.
 		if (isInternalNode(node)) return;
 
-		observe(node, observeDescriptor);
+		observe(node, observeDescriptor, true);
 	});
 }

@@ -1,4 +1,4 @@
-import { ignoreAllObservations, isIgnored } from './ignore';
+import { ignoreAllObservations, isIgnored } from './changesObserver';
 
 export function allNodes(node: Node, shouldTraverse?: (node: Node) => boolean): Node[] {
 	return ignoreAllObservations((): Node[] => {
@@ -73,7 +73,7 @@ export function isNode(node: any): node is Node {
 	return node instanceof Node;
 }
 
-export function removeNode(node: Node) {
-	const parent = node.parentNode ?? node.parentElement;
-	parent?.removeChild(node);
-}
+// export function removeNode(node: Node) {
+// 	const parent = node.parentNode ?? node.parentElement;
+// 	parent?.removeChild(node);
+// }

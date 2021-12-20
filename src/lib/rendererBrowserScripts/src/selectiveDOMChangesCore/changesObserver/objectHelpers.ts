@@ -55,3 +55,23 @@ export function getPrototypeAfter(object: any, afterPrototype: any): any {
 	}
 	return Object.getPrototypeOf(obj);
 }
+
+export type DeepProperty = PropertyKey[];
+export interface GetDeepPropertyReturn {
+	object: any;
+	property: PropertyKey;
+}
+
+// getDeepProperty returns last object in DeepProperty chain.
+// As property it will return last property in DeepProperty chain, so user can asses the object and property directly.
+export function getDeepProperty(object: any, deepProperty: DeepProperty): GetDeepPropertyReturn {
+	let obj = object;
+	for (let i = 0; i < deepProperty.length - 1; i++) {
+		obj = obj[deepProperty[i]];
+	}
+
+	return {
+		object: obj,
+		property: deepProperty[deepProperty.length - 1],
+	};
+}

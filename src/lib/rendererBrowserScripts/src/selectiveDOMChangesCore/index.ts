@@ -1,36 +1,61 @@
 import { isAllowed, StackFrame, StackTrace } from './allowedDOMChange';
-import { ObserveDescriptor } from './changesObserver';
+import { ObserveDescriptor, ignoreAllObservations } from './changesObserver';
+import { DeepProperty, getDeepProperty as getDeepPropertyHelper, GetDeepPropertyReturn } from './changesObserver/objectHelpers';
 import { allNodes, isNode, onNodeCreation } from './domHelpers';
-import { ignoreAllObservations } from './ignore';
 import { getMetadata } from './metadata';
 import { initObserve, observeNode } from './observe';
 import { getVDomContent, getCorrespondingVDomNode, syncVDom } from './vdom';
 
 export { StackFrame, StackTrace };
 
+function normalizeProperty(object: any, property: PropertyKey | DeepProperty): GetDeepPropertyReturn {
+	if (property instanceof Array) {
+		const deepProperty = getDeepPropertyHelper(object, property);
+		return deepProperty;
+	} else {
+		return { object, property };
+	}
+}
+
+function onFunctionCall(target: any, property: PropertyKey | DeepProperty, argArray: unknown[]): void {
+	if (!isAllowed()) return;
+	proxyActionToVdom(target, (vdomNode) => {
+		const args = [];
+		for (const arg of argArray) {
+			if (isNode(arg)) args.push(getCorrespondingVDomNode(arg));
+			else args.push(arg);
+		}
+
+		const normalized = normalizeProperty(vdomNode, property);
+		normalized.object[normalized.property](...args);
+	});
+}
+
+function onPropertySet(target: any, property: PropertyKey | DeepProperty, value: unknown): void {
+	if (!isAllowed()) return;
+	proxyActionToVdom(target, (vdomNode) => {
+		if (isNode(value)) value = getCorrespondingVDomNode(value);
+
+		const normalized = normalizeProperty(vdomNode, property);
+		normalized.object[normalized.property] = value;
+	});
+}
+
 const observeDescriptor: ObserveDescriptor = {
 	onFunctionCallContext(target, property, thisArg, argArray) {
-		if (!isAllowed()) return;
-		proxyActionToVdom(target, (vdomNode) => {
-			const args = [];
-			for (const arg of argArray) {
-				if (isNode(arg)) args.push(getCorrespondingVDomNode(arg));
-				else args.push(arg);
-			}
-
-			// @ts-ignore
-			vdomNode[property](...args);
-		});
+		onFunctionCall(target, property, argArray);
 	},
 
-	onPropertyGetContext(target, property) {},
-
 	onPropertySetContext(target, property, value) {
-		if (!isAllowed()) return;
-		proxyActionToVdom(target, (vdomNode) => {
-			// @ts-ignore
-			vdomNode[property] = value;
-		});
+		onPropertySet(target, property, value);
+	},
+
+	onDeepFunctionCallContext(target, deepTarget, deepProperty, thisArg, argArray) {
+		onFunctionCall(target, deepProperty, argArray);
+	},
+
+	onDeepPropertySetContext(target, deepTarget, deepProperty, value) {
+		onPropertySet(target, deepProperty, value);
 	},
 };
 
