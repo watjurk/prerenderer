@@ -17,7 +17,13 @@ export function getPropertyDescriptor(object: any, propertyKey: PropertyKey): Pr
 
 // getOwnPropertyKeys returns combined propertyNames and propertySymbols.
 export function getOwnPropertyKeys(object: any): PropertyKey[] {
-	return [...Object.getOwnPropertyNames(object), ...Object.getOwnPropertySymbols(object)];
+	let keys = [...Object.getOwnPropertyNames(object), ...Object.getOwnPropertySymbols(object)];
+
+	// Js is very very very weird, some properties like 'epubCaptionSide' of CSSStyleDeclaration are returned by getOwnPropertyNames but they kid of don't exist...
+	// So we need to filter them.
+	keys = keys.filter((key) => Object.prototype.hasOwnProperty.call(object, key));
+
+	return keys;
 }
 
 // getPrototypePropertyKeys returns properties that are found in objects prototype chain.
